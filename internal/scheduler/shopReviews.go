@@ -17,11 +17,11 @@ func StartShopReviewsScheduler(ctx context.Context, dhm *mongodb.DBHandlerMongo,
 	finish := make(chan struct{})
 
 	go func() {
-		log.Println("scheduler: start shop reviews scheduler at", startTime)
+		log.Println("shop reviews scheduler: start shop reviews scheduler at", startTime)
 
 		merchants, err := dhm.GetMerchantsFromOffers(ctx)
 		if err != nil && err != mongo.ErrNoDocuments {
-			log.Println("scheduler: error while getting merchants from offers:", err)
+			log.Println("shop reviews scheduler: error while getting merchants from offers:", err)
 			finish <- struct{}{}
 			return
 		}
@@ -31,14 +31,14 @@ func StartShopReviewsScheduler(ctx context.Context, dhm *mongodb.DBHandlerMongo,
 			for {
 				response, err := service.SendJSONRequest(ctx, http.MethodGet, "https://kaspi.kz/shop/rest/misc/merchant/"+merchant.ID+"/reviews?limit=100&page="+strconv.Itoa(page), nil)
 				if err != nil {
-					log.Println("scheduler: error while sending request for page", page, err)
+					log.Println("shop reviews scheduler: error while sending request for page", page, err)
 					page++
 					continue
 				}
 
 				data, ok := response["data"].([]interface{})
 				if !ok {
-					log.Println("scheduler: error while parsing reviews response")
+					log.Println("shop reviews scheduler: error while parsing reviews response")
 					page++
 					continue
 				}
@@ -50,25 +50,25 @@ func StartShopReviewsScheduler(ctx context.Context, dhm *mongodb.DBHandlerMongo,
 				for _, review := range data {
 					reviewMap, ok := review.(map[string]interface{})
 					if !ok {
-						log.Println("scheduler: error while parsing review")
+						log.Println("shop reviews scheduler: error while parsing review")
 						continue
 					}
 
 					author, ok := reviewMap["author"].(string)
 					if !ok {
-						log.Println("scheduler: error while parsing review author")
+						log.Println("shop reviews scheduler: error while parsing review author")
 						continue
 					}
 
 					date, ok := reviewMap["date"].(string)
 					if !ok {
-						log.Println("scheduler: error while parsing review date")
+						log.Println("shop reviews scheduler: error while parsing review date")
 						continue
 					}
 
 					rating, ok := reviewMap["rating"].(float64)
 					if !ok {
-						log.Println("scheduler: error while parsing review rating")
+						log.Println("shop reviews scheduler: error while parsing review rating")
 						continue
 					}
 
@@ -80,7 +80,7 @@ func StartShopReviewsScheduler(ctx context.Context, dhm *mongodb.DBHandlerMongo,
 
 					// save review to db
 					if err = dhm.SaveShopReview(ctx, hashId, reviewMap); err != nil && err != mongo.ErrNoDocuments {
-						log.Println("scheduler: error while saving shop review:", err)
+						log.Println("shop reviews scheduler: error while saving shop review:", err)
 						continue
 					}
 				}
@@ -94,7 +94,7 @@ func StartShopReviewsScheduler(ctx context.Context, dhm *mongodb.DBHandlerMongo,
 	for {
 		select {
 		case <-finish:
-			log.Println("scheduler: finish shop reviews scheduler in", time.Since(startTime))
+			log.Println("shop reviews scheduler: finish shop reviews scheduler in", time.Since(startTime))
 
 			// sleep 3 min before start new shop reviews scheduler
 			time.Sleep(3 * time.Minute)

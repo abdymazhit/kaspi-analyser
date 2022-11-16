@@ -15,7 +15,7 @@ func StartProductsScheduler(ctx context.Context, dhm *mongodb.DBHandlerMongo, se
 	startTime := time.Now()
 	finish := make(chan struct{})
 
-	log.Println("scheduler: start products scheduler at", startTime)
+	log.Println("products scheduler: start products scheduler at", startTime)
 
 	// query for products by page
 	var currentMaxPage int
@@ -33,7 +33,7 @@ func StartProductsScheduler(ctx context.Context, dhm *mongodb.DBHandlerMongo, se
 			select {
 			case page := <-queue:
 				go func() {
-					log.Println("scheduler: start page", page)
+					log.Println("products scheduler: start page", page)
 
 					pageFinish := make(chan struct{})
 					go func() {
@@ -50,14 +50,14 @@ func StartProductsScheduler(ctx context.Context, dhm *mongodb.DBHandlerMongo, se
 
 					productsResponse, err := service.SendJSONRequest(ctx, http.MethodGet, "https://kaspi.kz/yml/product-view/pl/results?page="+strconv.Itoa(page), nil)
 					if err != nil {
-						log.Println("scheduler: error while sending request for page", page, err)
+						log.Println("products scheduler: error while sending request for page", page, err)
 						pageFinish <- struct{}{}
 						return
 					}
 
 					data, ok := productsResponse["data"].([]interface{})
 					if !ok {
-						log.Println("scheduler: error while parsing products response")
+						log.Println("products scheduler: error while parsing products response")
 						pageFinish <- struct{}{}
 						return
 					}
@@ -73,20 +73,20 @@ func StartProductsScheduler(ctx context.Context, dhm *mongodb.DBHandlerMongo, se
 					for _, productData := range data {
 						product, ok := productData.(map[string]interface{})
 						if !ok {
-							log.Println("scheduler: error while parsing product")
+							log.Println("products scheduler: error while parsing product")
 							continue
 						}
 
 						id, ok := product["id"].(string)
 						if !ok {
-							log.Println("scheduler: error while getting product id")
+							log.Println("products scheduler: error while getting product id")
 							continue
 						}
 						delete(product, "id")
 
 						// save product to db
 						if err = dhm.SaveProduct(ctx, id, product); err != nil && err != mongo.ErrNoDocuments {
-							log.Println("scheduler: error while saving product:", err)
+							log.Println("products scheduler: error while saving product:", err)
 							continue
 						}
 
@@ -96,13 +96,13 @@ func StartProductsScheduler(ctx context.Context, dhm *mongodb.DBHandlerMongo, se
 							"limit":  64,
 						})
 						if err != nil {
-							log.Println("scheduler: error while sending request for page", page, err)
+							log.Println("products scheduler: error while sending request for page", page, err)
 							continue
 						}
 
 						offers, ok := offersResponse["offers"].([]interface{})
 						if !ok {
-							log.Println("scheduler: error while parsing offers response", offersResponse)
+							log.Println("products scheduler: error while parsing offers response", offersResponse)
 							continue
 						}
 
@@ -110,18 +110,18 @@ func StartProductsScheduler(ctx context.Context, dhm *mongodb.DBHandlerMongo, se
 						for _, offerData := range offers {
 							offer, ok := offerData.(map[string]interface{})
 							if !ok {
-								log.Println("scheduler: error while parsing offer")
+								log.Println("products scheduler: error while parsing offer")
 								continue
 							}
 
 							merchantId, ok := offer["merchantId"].(string)
 							if !ok {
-								log.Println("scheduler: error while getting offer merchant id")
+								log.Println("products scheduler: error while getting offer merchant id")
 								continue
 							}
 
 							if err = dhm.SaveOffer(ctx, id+"_"+merchantId, offer); err != nil && err != mongo.ErrNoDocuments {
-								log.Println("scheduler: error while saving offer:", err)
+								log.Println("products scheduler: error while saving offer:", err)
 								continue
 							}
 						}
@@ -135,7 +135,7 @@ func StartProductsScheduler(ctx context.Context, dhm *mongodb.DBHandlerMongo, se
 
 	select {
 	case <-finish:
-		log.Println("scheduler: products scheduler is done, time:", time.Since(startTime))
+		log.Println("products scheduler: products scheduler is done, time:", time.Since(startTime))
 		StartProductsScheduler(ctx, dhm, service)
 	}
 }

@@ -27,9 +27,11 @@ func (dhm DBHandlerMongo) SaveOffer(ctx context.Context, id string, offer interf
 func (dhm DBHandlerMongo) GetMerchantsFromOffers(ctx context.Context) ([]models.Merchant, error) {
 	cur, err := getOffersCollection(dhm).Aggregate(ctx, []bson.M{
 		{"$group": bson.M{
-			"_id":          "$merchantId",
-			"merchantId":   bson.M{"$first": "$merchantId"},
-			"merchantName": bson.M{"$first": "$merchantName"},
+			"_id":                     "$merchantId",
+			"merchantId":              bson.M{"$first": "$merchantId"},
+			"merchantName":            bson.M{"$first": "$merchantName"},
+			"merchantRating":          bson.M{"$first": "$merchantRating"},
+			"merchantReviewsQuantity": bson.M{"$first": "$merchantReviewsQuantity"},
 		}},
 	})
 	if err != nil {
@@ -43,10 +45,17 @@ func (dhm DBHandlerMongo) GetMerchantsFromOffers(ctx context.Context) ([]models.
 
 	var merchants []models.Merchant
 	for _, result := range results {
-		merchants = append(merchants, models.Merchant{
+		merchant := models.Merchant{
 			ID:   result["merchantId"].(string),
 			Name: result["merchantName"].(string),
-		})
+		}
+		if result["merchantRating"] != nil {
+			merchant.Rating = result["merchantRating"].(float64)
+		}
+		if result["merchantReviewsQuantity"] != nil {
+			merchant.ReviewsCount = int64(result["merchantReviewsQuantity"].(float64))
+		}
+		merchants = append(merchants, merchant)
 	}
 	return merchants, nil
 }

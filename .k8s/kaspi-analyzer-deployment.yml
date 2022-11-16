@@ -1,0 +1,24 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kaspi-analyzer-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kaspi-analyzer-pod
+  template:
+    metadata:
+      labels:
+        app: kaspi-analyzer-pod
+    spec:
+      containers:
+        - name: kaspi-analyzer-container
+          image: <IMAGE>
+          env:
+            # MongoDB env
+            - name: KA_MONGO_URI
+              valueFrom:
+                secretKeyRef:
+                  name: dev-makke-secret
+                  key: KA_MONGO_URI

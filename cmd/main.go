@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"github.com/joho/godotenv"
 	"kaspi-analyser/internal/mongodb"
 	"kaspi-analyser/internal/scheduler"
 	"kaspi-analyser/pkg/httpClient"
@@ -14,15 +13,9 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	// init env
-	if err := godotenv.Load(); err != nil {
-		log.Fatal("error while loading env:", err)
-		return
-	}
-
 	// init mongodb
 	dhm, err := mongodb.NewDBHandlerMongo(ctx, mongodb.DBConfigMongo{
-		URI: os.Getenv("MONGODB_URI"),
+		URI: os.Getenv("KA_MONGO_URI"),
 	})
 	if err != nil {
 		log.Fatal("error while connecting to mongodb:", err)

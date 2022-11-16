@@ -5,6 +5,7 @@ import (
 	"github.com/joho/godotenv"
 	"kaspi-analyser/internal/mongodb"
 	"kaspi-analyser/internal/scheduler"
+	"kaspi-analyser/pkg/httpClient"
 	"log"
 	"os"
 )
@@ -28,9 +29,11 @@ func main() {
 		return
 	}
 
+	service := httpClient.NewService()
+
 	// start products scheduler
 	go func() {
-		scheduler.StartProductsScheduler(ctx, dhm)
+		scheduler.StartProductsScheduler(ctx, dhm, service)
 	}()
 
 	// start shops scheduler
@@ -40,7 +43,7 @@ func main() {
 
 	// start shop reviews scheduler
 	go func() {
-		scheduler.StartShopReviewsScheduler(ctx, dhm)
+		scheduler.StartShopReviewsScheduler(ctx, dhm, service)
 	}()
 
 	<-ctx.Done()

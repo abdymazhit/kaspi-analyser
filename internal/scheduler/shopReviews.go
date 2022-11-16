@@ -4,14 +4,15 @@ import (
 	"context"
 	"go.mongodb.org/mongo-driver/mongo"
 	"kaspi-analyser/internal/mongodb"
-	"kaspi-analyser/internal/utils"
+	"kaspi-analyser/pkg/httpClient"
+	"kaspi-analyser/pkg/md5"
 	"log"
 	"net/http"
 	"strconv"
 	"time"
 )
 
-func StartShopReviewsScheduler(ctx context.Context, dhm *mongodb.DBHandlerMongo) {
+func StartShopReviewsScheduler(ctx context.Context, dhm *mongodb.DBHandlerMongo, service *httpClient.Service) {
 	startTime := time.Now()
 	finish := make(chan struct{})
 
@@ -28,7 +29,7 @@ func StartShopReviewsScheduler(ctx context.Context, dhm *mongodb.DBHandlerMongo)
 		for _, merchant := range merchants {
 			page := 0
 			for {
-				response, err := utils.SendJSONRequest(ctx, http.MethodGet, "https://kaspi.kz/shop/rest/misc/merchant/"+merchant.ID+"/reviews?limit=100&page="+strconv.Itoa(page), nil)
+				response, err := service.SendJSONRequest(ctx, http.MethodGet, "https://kaspi.kz/shop/rest/misc/merchant/"+merchant.ID+"/reviews?limit=100&page="+strconv.Itoa(page), nil)
 				if err != nil {
 					log.Println("scheduler: error while sending request for page", page, err)
 					page++
@@ -75,7 +76,7 @@ func StartShopReviewsScheduler(ctx context.Context, dhm *mongodb.DBHandlerMongo)
 					delete(reviewMap, "id")
 
 					// create hash string by author, date, rating
-					hashId := utils.GetMD5Hash(author + date + strconv.FormatFloat(rating, 'f', 0, 64))
+					hashId := md5.GetMD5Hash(author + date + strconv.FormatFloat(rating, 'f', 0, 64))
 
 					// save review to db
 					if err = dhm.SaveShopReview(ctx, hashId, reviewMap); err != nil && err != mongo.ErrNoDocuments {

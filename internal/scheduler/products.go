@@ -4,14 +4,14 @@ import (
 	"context"
 	"go.mongodb.org/mongo-driver/mongo"
 	"kaspi-analyser/internal/mongodb"
-	"kaspi-analyser/internal/utils"
+	"kaspi-analyser/pkg/httpClient"
 	"log"
 	"net/http"
 	"strconv"
 	"time"
 )
 
-func StartProductsScheduler(ctx context.Context, dhm *mongodb.DBHandlerMongo) {
+func StartProductsScheduler(ctx context.Context, dhm *mongodb.DBHandlerMongo, service *httpClient.Service) {
 	startTime := time.Now()
 	finish := make(chan struct{})
 
@@ -19,10 +19,10 @@ func StartProductsScheduler(ctx context.Context, dhm *mongodb.DBHandlerMongo) {
 
 	// query for products by page
 	var currentMaxPage int
-	queue := make(chan int, 5)
+	queue := make(chan int, 100)
 
 	// run first 5 pages
-	for i := 1; i <= 4; i++ {
+	for i := 1; i <= 99; i++ {
 		currentMaxPage = i
 		queue <- i
 	}
@@ -48,7 +48,7 @@ func StartProductsScheduler(ctx context.Context, dhm *mongodb.DBHandlerMongo) {
 						}
 					}()
 
-					productsResponse, err := utils.SendJSONRequest(ctx, http.MethodGet, "https://kaspi.kz/yml/product-view/pl/results?page="+strconv.Itoa(page), nil)
+					productsResponse, err := service.SendJSONRequest(ctx, http.MethodGet, "https://kaspi.kz/yml/product-view/pl/results?page="+strconv.Itoa(page), nil)
 					if err != nil {
 						log.Println("scheduler: error while sending request for page", page, err)
 						pageFinish <- struct{}{}
@@ -91,7 +91,7 @@ func StartProductsScheduler(ctx context.Context, dhm *mongodb.DBHandlerMongo) {
 						}
 
 						// get offers for product
-						offersResponse, err := utils.SendJSONRequest(ctx, http.MethodPost, "https://kaspi.kz/yml/offer-view/offers/"+id, map[string]interface{}{
+						offersResponse, err := service.SendJSONRequest(ctx, http.MethodPost, "https://kaspi.kz/yml/offer-view/offers/"+id, map[string]interface{}{
 							"cityId": "750000000",
 							"limit":  64,
 						})
@@ -136,6 +136,6 @@ func StartProductsScheduler(ctx context.Context, dhm *mongodb.DBHandlerMongo) {
 	select {
 	case <-finish:
 		log.Println("scheduler: products scheduler is done, time:", time.Since(startTime))
-		StartProductsScheduler(ctx, dhm)
+		StartProductsScheduler(ctx, dhm, service)
 	}
 }

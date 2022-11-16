@@ -9,7 +9,7 @@ import (
 
 const (
 	// main database
-	MAIN_DATABASE           = "main"
+	MAIN_DATABASE           = "new_main"
 	PRODUCTS_COLLECTION     = "products"
 	OFFERS_COLLECTION       = "offers"
 	SHOPS_COLLECTION        = "shops"
